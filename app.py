@@ -16,4 +16,3 @@ async def detect_fish(file: UploadFile = File(...)):
     results = model(img)
     count = len(results[0].boxes)
     return {"fish_count": count}
-s
