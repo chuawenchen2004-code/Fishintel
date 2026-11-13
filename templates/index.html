@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FishIntel | UMT Fish Detector - 11 Species</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
+        body { font-family: 'Outfit', sans-serif; }
+        .title { font-family: 'Space Grotesk', sans-serif; }
+        .glass { backdrop-filter: blur(16px); background: rgba(255,255,255,0.85); }
+        .fish-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="bg-[#f8fafc] min-h-screen">
+    <nav class="sticky top-0 z-50 glass border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-400 rounded-xl flex items-center justify-center text-white text-xl"><i class="fas fa-fish"></i></div>
+                <div>
+                    <h1 class="title font-bold text-xl text-slate-900 leading-none">FishIntel</h1>
+                    <p class="text-xs text-slate-500 font-medium">UMT Fish Detector • {{ num_species }} Species AI</p>
+                </div>
+            </div>
+            <div class="hidden md:flex items-center gap-2 text-xs font-medium">
+                <span class="px-3 py-1.5 bg-green-50 text-green-700 rounded-full border border-green-200"><i class="fas fa-circle text-[8px] mr-1"></i> Model: YOLOv8-cls • {{ num_species }} classes</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-6 py-8 grid lg:grid-cols-12 gap-8">
+        <div class="lg:col-span-7">
+            <div class="bg-white rounded-[24px] shadow-sm border border-slate-200 p-8">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h2 class="title text-2xl font-bold text-slate-900">Identify Fish Species</h2>
+                        <p class="text-sm text-slate-500 mt-1">Upload a fish image on white background for best accuracy</p>
+                    </div>
+                    <div class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-semibold">{{ num_species }} species supported</div>
+                </div>
+
+                <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                    <div id="dropZone" class="group relative border-2 border-dashed border-slate-300 rounded-2xl p-10 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-all cursor-pointer">
+                        <input type="file" name="file" id="fileInput" accept="image/*" class="hidden" required>
+                        <div id="uploadPrompt">
+                            <div class="w-16 h-16 mx-auto bg-slate-100 group-hover:bg-blue-100 rounded-2xl flex items-center justify-center text-2xl text-slate-400 group-hover:text-blue-600 transition-colors mb-4"><i class="fas fa-cloud-arrow-up"></i></div>
+                            <p class="font-semibold text-slate-900">Drop image here or click to browse</p>
+                            <p class="text-xs text-slate-500 mt-1">JPG, PNG • Max 10MB • White background recommended</p>
+                        </div>
+                        <img id="preview" class="hidden max-h-80 mx-auto rounded-xl shadow-lg">
+                    </div>
+                    <button type="submit" id="submitBtn" class="hidden w-full mt-6 bg-slate-900 hover:bg-black text-white font-semibold py-4 rounded-xl transition-all flex items-center justify-center gap-2">
+                        <i class="fas fa-wand-magic-sparkles"></i> Analyze Fish
+                    </button>
+                </form>
+
+                {% if prediction %}
+                <div class="mt-8 p-6 bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl text-white">
+                    <div class="flex gap-6">
+                        {% if image_path %}
+                        <img src="{{ image_path }}" class="w-24 h-24 rounded-xl object-cover border border-white/20">
+                        {% endif %}
+                        <div class="flex-1">
+                            <p class="text-xs uppercase tracking-widest text-white/60 font-bold">Prediction</p>
+                            <h3 class="title text-3xl font-bold mt-1">{{ prediction }}</h3>
+                            <div class="mt-3 flex items-center gap-3">
+                                <div class="flex-1 h-2 bg-white/20 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-cyan-400 to-blue-400" style="width: {{ confidence }}%"></div></div>
+                                <span class="font-bold text-cyan-300">{{ "%.2f"|format(confidence) }}%</span>
+                            </div>
+                            {% if top3 %}
+                            <div class="mt-4 grid grid-cols-3 gap-2">
+                                {% for t in top3 %}
+                                <div class="bg-white/10 rounded-lg px-3 py-2 border border-white/10">
+                                    <p class="text-[11px] text-white/60">{{ loop.index }}.</p>
+                                    <p class="text-sm font-semibold">{{ t.name }}</p>
+                                    <p class="text-xs text-cyan-300">{{ "%.1f"|format(t.conf) }}%</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {% if fish_info %}
+                <div class="mt-4 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                    <div class="flex items-center gap-2 mb-3">
+                        <h4 class="font-bold text-slate-900">About {{ prediction }}</h4>
+                        <span class="text-[11px] italic bg-slate-100 px-2.5 py-1 rounded-full text-slate-600 border border-slate-200">{{ fish_info.scientific }}</span>
+                    </div>
+                    <div class="grid grid-cols-1 gap-3 text-sm">
+                        <div class="flex gap-3"><span class="text-slate-400 w-28 shrink-0 font-medium"><i class="fas fa-water mr-1"></i> Habitat</span><span class="font-medium text-slate-800">{{ fish_info.habitat }}</span></div>
+                        <div class="flex gap-3"><span class="text-slate-400 w-28 shrink-0 font-medium"><i class="fas fa-utensils mr-1"></i> Diet</span><span class="font-medium text-slate-800">{{ fish_info.diet }}</span></div>
+                        <div class="flex gap-3"><span class="text-slate-400 w-28 shrink-0 font-medium"><i class="fas fa-ruler-combined mr-1"></i> Max Length</span><span class="font-medium text-slate-800">{{ fish_info.length }}</span></div>
+                        <div class="mt-1 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-100 rounded-xl">
+                            <span class="text-[11px] font-bold text-blue-600 uppercase tracking-wide"><i class="fas fa-lightbulb mr-1"></i> Fun Fact</span>
+                            <p class="text-sm text-slate-700 mt-1.5 leading-relaxed">{{ fish_info.fun }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="lg:col-span-5 space-y-6">
+            <div class="bg-white rounded-[24px] shadow-sm border border-slate-200 p-6">
+                <h3 class="title font-bold text-slate-900 flex items-center gap-2"><i class="fas fa-list text-blue-600"></i> Supported Species ({{ num_species }})</h3>
+                <div class="mt-4 grid grid-cols-2 gap-2.5">
+                    {% for species in species_list %}
+                    <div class="fish-card flex items-center gap-2.5 px-3.5 py-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl transition-all">
+                        <div class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-700">{{ loop.index }}</div>
+                        <span class="text-sm font-medium text-slate-800">{{ species }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                    <i class="fas fa-lightbulb mr-1"></i> <b>Tip:</b> Catfish family (Baung/Keli/Patin) & Snakehead (Haruan/Bujuk/Toman) look similar. Use clear top-view photo.
+                </div>
+            </div>
+
+            <div class="bg-white rounded-[24px] shadow-sm border border-slate-200 p-6">
+                <h3 class="title font-bold text-slate-900">Model Performance</h3>
+                <div class="mt-4 space-y-3 text-sm">
+                    <div class="flex justify-between"><span class="text-slate-500">Model</span><span class="font-semibold">YOLOv8n-cls • 11 classes</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Training Images</span><span class="font-semibold">660 (60 per class)</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Test Accuracy</span><span class="font-semibold text-green-600">62.27% Top-1 / 89.1% Top-5</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Best Classes</span><span class="font-semibold">Sebarau, Siakap (90%)</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const preview = document.getElementById('preview');
+    const uploadPrompt = document.getElementById('uploadPrompt');
+    const submitBtn = document.getElementById('submitBtn');
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('border-blue-400','bg-blue-50'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-blue-400','bg-blue-50'));
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault(); dropZone.classList.remove('border-blue-400','bg-blue-50');
+        if(e.dataTransfer.files.length){ fileInput.files = e.dataTransfer.files; showPreview(e.dataTransfer.files[0]); }
+    });
+    fileInput.addEventListener('change', () => { if(fileInput.files[0]) showPreview(fileInput.files[0]); });
+    function showPreview(file){
+        const reader = new FileReader();
+        reader.onload = e => {
+            preview.src = e.target.result;
+            preview.classList.remove('hidden');
+            uploadPrompt.classList.add('hidden');
+            submitBtn.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+</script>
+</body>
+</html>

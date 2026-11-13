@@ -1,7 +1,5 @@
-ultralytics
-opencv-python
-fastapi
-uvicorn
-python-multipart
+flask
 pillow
-numpy
+ultralytics
+torch
+torchvision --extra-index-url https://download.pytorch.org/whl/cpu

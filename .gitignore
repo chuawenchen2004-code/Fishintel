@@ -1,9 +1,22 @@
+# Dataset - too big for Github
+FishIntel-Dataset/
+*.zip
+*.pt
+*.pth
+
+# Uploads
+static/uploads/
+uploads/
+
+# Python
 __pycache__/
-yolov8n.pt
-best.pt
-result.jpg
-temp.jpg
-*.jpg
-*.png
 *.pyc
 venv/
+.env
+
+# Docker
+.dockerignore
+
+# OS
+.DS_Store
+Thumbs.db
