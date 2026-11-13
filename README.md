@@ -1,5 +1,5 @@
 # UMT Fish Detector - 11 Species Classification
-**StudentID_Topic: [YourID]_FishClassification**
+**StudentID_Topic: CHUA WEN CHEN S75581_FishClassification**
 **UMT - Fish Species Classification using YOLOv8n-cls**
 
 ### Project Overview
